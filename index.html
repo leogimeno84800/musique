@@ -1,0 +1,486 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Salle Musique</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: one console panel, like a cell wall: status strip on top, 3×3 button grid, transport controls below. Single committed dark look. */
+:root {
+  --wall: #15171a;
+  --panel: #1f2226;
+  --panel-edge: #33373d;
+  --ink: #e9e6df;
+  --muted: #9a9890;
+  --signal: #ffc23d;
+  --ok: #4fd18b;
+  --bad: #ff5a4e;
+  --f-display: "Chakra Petch", "Arial Narrow", sans-serif;
+  --f-body: "Barlow", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, monospace;
+  color-scheme: dark;
+}
+html, body { min-height: 100%; }
+body {
+  background: var(--wall);
+  background-image: radial-gradient(circle at 50% -10%, #23262b 0%, var(--wall) 60%);
+  color: var(--ink);
+  font-family: var(--f-body);
+  font-size: 16px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 32px;
+}
+.wrap { max-width: 520px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+h1 {
+  font-family: var(--f-display); font-weight: 700; font-size: 28px; margin: 0;
+  letter-spacing: 0.04em; text-transform: uppercase;
+}
+h1 span { color: var(--signal); }
+.timer { font-family: var(--f-mono); font-size: 15px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.timer b { color: var(--ink); font-weight: 500; }
+
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+label.lbl { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+select, .seg button, .btn {
+  font: 500 15px var(--f-body); color: var(--ink);
+  background: var(--panel); border: 1px solid var(--panel-edge); border-radius: 6px;
+  padding: 9px 12px; cursor: pointer;
+}
+select { flex: 1; min-width: 0; }
+.seg { display: inline-flex; border: 1px solid var(--panel-edge); border-radius: 6px; overflow: hidden; }
+.seg button { border: 0; border-radius: 0; padding: 8px 12px; background: transparent; color: var(--muted); }
+.seg button + button { border-left: 1px solid var(--panel-edge); }
+.seg button[aria-pressed="true"] { background: var(--signal); color: #1a1400; font-weight: 600; }
+button:focus-visible, select:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+
+.console {
+  background: var(--panel); border: 1px solid var(--panel-edge); border-radius: 14px;
+  padding: 18px; display: flex; flex-direction: column; gap: 18px;
+  box-shadow: inset 0 1px 0 #ffffff0d, 0 20px 40px #0006;
+}
+.status {
+  font-family: var(--f-display); font-size: 19px; font-weight: 500; text-align: center;
+  min-height: 1.5em; letter-spacing: 0.02em;
+}
+.status.ok { color: var(--ok); } .status.bad { color: var(--bad); } .status.go { color: var(--signal); }
+
+.grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(12px, 4vw, 22px); padding: 4px clamp(4px, 3vw, 24px); }
+.pad {
+  --c: #888;
+  aspect-ratio: 1; max-width: 100%; border-radius: 50%;
+  border: 3px solid #0008; cursor: pointer; position: relative;
+  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--c) 55%, #000) 0%, color-mix(in srgb, var(--c) 30%, #000) 70%);
+  box-shadow: 0 6px 0 #0009, inset 0 2px 3px #ffffff22;
+  transition: transform .06s, box-shadow .06s, filter .12s;
+  display: grid; place-items: center;
+  font-family: var(--f-display); font-weight: 700; font-size: clamp(14px, 4.5vw, 20px); color: #ffffffcc;
+  touch-action: manipulation; -webkit-tap-highlight-color: transparent; user-select: none;
+}
+.pad.lit {
+  background: radial-gradient(circle at 35% 30%, #fff 0%, var(--c) 45%, color-mix(in srgb, var(--c) 70%, #000) 100%);
+  box-shadow: 0 2px 0 #0009, 0 0 28px 6px color-mix(in srgb, var(--c) 70%, transparent);
+  transform: translateY(4px); color: #000a;
+}
+.pad.off { opacity: .18; cursor: not-allowed; filter: grayscale(1); }
+.pad.wrong { animation: shake .35s; }
+.lvl2 .pad { --c: #ffffff !important; background: radial-gradient(circle at 35% 30%, #2b2d31 0%, #0a0b0d 75%); border-color: #000; }
+.lvl2 .pad.lit { background: radial-gradient(circle at 35% 30%, #fff 0%, #f4f4f4 60%, #d6d6d6 100%); box-shadow: 0 2px 0 #0009, 0 0 30px 8px #ffffffaa; }
+.lvl2 .pad.off { opacity: 1; filter: none; cursor: pointer; }
+.lvl2 .pad .nm, .hide-names .pad .nm, .show-num .pad .nm { display: none; }
+.pad .num { display: none; font-family: var(--f-mono); }
+.show-num .pad .num { display: inline; }
+.lvl2 .pad .num { display: none; }
+.level { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.level button {
+  font: 600 15px var(--f-body); color: var(--muted); text-align: left;
+  background: var(--panel); border: 1px solid var(--panel-edge); border-radius: 8px;
+  padding: 10px 12px; cursor: pointer; display: flex; flex-direction: column; gap: 2px;
+}
+.level button small { font-weight: 400; font-size: 13px; }
+.level button[aria-pressed="true"] { border-color: var(--signal); color: var(--ink); box-shadow: inset 0 0 0 1px var(--signal); }
+.level button b { font-family: var(--f-display); color: var(--signal); font-size: 13px; letter-spacing: .08em; text-transform: uppercase; }
+@keyframes shake { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+
+.progress { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; }
+.progress i { width: 10px; height: 10px; border-radius: 2px; background: var(--panel-edge); }
+.progress i.done { background: var(--ok); }
+.progress i.target { background: var(--signal); }
+.progress i.hidden-step { background: #ffffff0a; }
+
+.controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.btn.primary { background: var(--signal); color: #1a1400; border-color: var(--signal); font-weight: 600; }
+.btn:disabled { opacity: .45; cursor: default; }
+
+details { background: var(--panel); border: 1px solid var(--panel-edge); border-radius: 10px; padding: 12px 14px; }
+summary { cursor: pointer; font-weight: 600; }
+.settings { display: flex; flex-direction: column; gap: 14px; margin-top: 14px; }
+.settings .row { justify-content: space-between; }
+input[type=range] { flex: 1; accent-color: var(--signal); min-width: 120px; }
+.stats { font-size: 14px; color: var(--muted); text-align: center; }
+.stats b { color: var(--ink); font-family: var(--f-mono); font-weight: 500; }
+@media (prefers-reduced-motion: reduce) { .pad { transition: none; } .pad.wrong { animation: none; outline: 3px solid var(--bad); } }
+</style>
+
+<style>body{margin:0}[hidden]{display:none!important}</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Salle <span>Musique</span></h1>
+    <div class="timer">Temps <b id="time">0:00</b></div>
+  </header>
+
+  <div class="row">
+    <label class="lbl" for="song">Musique</label>
+    <select id="song"></select>
+  </div>
+
+  <div class="level" id="level">
+    <button data-v="1" aria-pressed="true"><b>Niveau 1</b>Couleurs<small>Boutons colorés, dans l'ordre de la mélodie</small></button>
+    <button data-v="2" aria-pressed="false"><b>Niveau 2</b>Tout noir<small>Boutons noirs, mélangés à chaque partie</small></button>
+  </div>
+
+
+  <section class="console">
+    <div class="status go" id="status">Appuie sur Écouter pour lancer la mélodie</div>
+    <div class="grid" id="grid"></div>
+    <div class="progress" id="progress"></div>
+    <div class="controls">
+      <button class="btn primary" id="play">Écouter</button>
+      <button class="btn" id="reset">Recommencer</button>
+    </div>
+  </section>
+
+  <p class="stats" id="stats"></p>
+
+  <details>
+    <summary>Réglages</summary>
+    <div class="settings">
+      <div class="row">
+        <span class="lbl">Repères sur les boutons (niveau 1)</span>
+        <div class="seg" id="names">
+          <button data-v="off" aria-pressed="true">Cachés</button>
+          <button data-v="on" aria-pressed="false">Notes</button>
+          <button data-v="num" aria-pressed="false">Chiffres</button>
+        </div>
+      </div>
+      <div class="row">
+        <span class="lbl">En cas d'erreur</span>
+        <div class="seg" id="err">
+          <button data-v="restart" aria-pressed="true">Tout reprendre</button>
+          <button data-v="retry" aria-pressed="false">Réessayer</button>
+        </div>
+      </div>
+      <div class="row">
+        <label class="lbl" for="speed">Vitesse</label>
+        <input type="range" id="speed" min="0.5" max="1.5" step="0.1" value="1">
+      </div>
+    </div>
+  </details>
+</div>
+
+<script>
+// ===== MUSIQUES =====
+// Chaque note : [nom, durée en croches]. Noms : C D E F G A B (+ # pour dièse) + octave.
+const SONGS = [
+  {
+    name: "Row, Row, Row Your Boat",
+    tempo: 0.2, // secondes par croche
+    notes: [
+      ["C4",3],["C4",3],["C4",2],["D4",1],["E4",3],
+      ["E4",2],["D4",1],["E4",2],["F4",1],["G4",6],
+      ["C5",1],["C5",1],["C5",1],["G4",1],["G4",1],["G4",1],
+      ["E4",1],["E4",1],["E4",1],["C4",1],["C4",1],["C4",1],
+      ["G4",2],["F4",1],["E4",2],["D4",1],["C4",6]
+    ]
+  },
+  {
+    name: "Ode à la joie",
+    tempo: 0.2,
+    notes: [
+      ["E4",2],["E4",2],["F4",2],["G4",2],["G4",2],["F4",2],["E4",2],["D4",2],
+      ["C4",2],["C4",2],["D4",2],["E4",2],["E4",3],["D4",1],["D4",4],
+      ["E4",2],["E4",2],["F4",2],["G4",2],["G4",2],["F4",2],["E4",2],["D4",2],
+      ["C4",2],["C4",2],["D4",2],["E4",2],["D4",3],["C4",1],["C4",4]
+    ]
+  },
+  {
+    name: "La ferme à Mathurin",
+    tempo: 0.2,
+    notes: [
+      ["C4",2],["C4",2],["C4",2],["G3",2],["A3",2],["A3",2],["G3",4],
+      ["E4",2],["E4",2],["D4",2],["D4",2],["C4",4],
+      ["G3",2],
+      ["C4",2],["C4",2],["C4",2],["G3",2],["A3",2],["A3",2],["G3",4],
+      ["E4",2],["E4",2],["D4",2],["D4",2],["C4",6]
+    ]
+  },
+  {
+    name: "Morning Has Broken",
+    tempo: 1, // ici les durées sont en secondes, mesurées sur la vidéo de la salle
+    notes: [
+      // notes confirmées (air traditionnel « Bunessan »)
+      ["C4",0.47],["E4",0.36],["G4",0.50],["C5",1.22],["D5",1.20],
+      ["B4",0.45],["A4",0.33],["G4",0.50],["A4",1.17],["G4",1.25],
+      ["C4",0.48],["D4",0.40],["E4",0.40],["G4",1.20],["A4",1.20],
+      ["D4",0.50],["E4",0.47],["D4",0.33],["C4",1.10]
+    ]
+  },
+  {
+    name: "When Johnny Comes Marching Home",
+    tempo: 0.22, // rythme de marche en 6/8 (unité = une croche)
+    notes: [
+      // When | John-ny comes | march-ing home a- | gain, hur-rah, hur-rah
+      ["A4",1],["A4",2],["A4",1],["A4",2],["B4",1],["C5",2],["B4",1],["C5",2],["A4",1],["G4",3],["G4",5],
+      // deuxième phrase, qui monte vers l'aigu
+      ["A4",1],["A4",2],["A4",1],["A4",2],["B4",1],["C5",2],["B4",1],["C5",2],["D5",1],["E5",2],["C5",1],["E5",6]
+    ]
+  },
+  {
+    name: "Scarborough Fair",
+    tempo: 1, // durées en secondes, calées sur la vidéo de la salle
+    notes: [
+      ["D4",0.82],["D4",0.37],["A4",0.81],["A4",0.44],["E4",0.56],["F4",0.23],["E4",0.39],["D4",1.57],
+      ["A4",0.41],["C5",0.42],["D5",0.46],["C5",0.72],["A4",0.55],["B4",0.35],["G4",0.48],["A4",1.60]
+    ]
+  },
+  {
+    name: "La Lettre à Élise",
+    tempo: 0.2, // une unité = une double croche
+    notes: [
+      ["E5",1],["D#5",1],["E5",1],["D#5",1],["E5",1],["B4",1],["D5",1],["C5",1],["A4",3],
+      ["A4",1],["B4",3],["G#4",1],["B4",1],["C5",3],
+      ["E5",1],["D#5",1],["E5",1],["D#5",1],["E5",1],["B4",1],["D5",1],["C5",1],["A4",3],
+      ["A4",1],["B4",3],["C5",1],["B4",1],["A4",5]
+    ]
+  },
+  {
+    name: "Pomme de reinette et pomme d'api",
+    tempo: 0.2,
+    notes: [
+      ["C4",2],["F4",2],["F4",2],["F4",2],["F4",2],["A4",2],["C5",2],["A4",2],["F4",4],
+      ["G4",2],["G4",2],["G4",2],["E4",2],["D4",2],["C4",4],
+      ["C4",2],["F4",2],["F4",2],["F4",2],["F4",2],["A4",2],["C5",2],["A4",2],["F4",4],
+      ["G4",2],["C4",2],["F4",6]
+    ]
+  },
+  {
+    name: "Amazing Grace",
+    tempo: 1, // durées en secondes, calées sur la vidéo de la salle
+    notes: [
+      ["D4",0.25],["G4",0.40],["G4",0.35],["B4",0.46],["A4",0.23],["G4",0.24],["B4",1.52],["A4",0.57],["G4",1.43],["E4",0.20],["D4",1.85],
+      ["D4",0.42],["G4",0.40],["G4",0.35],["B4",0.46],["A4",0.23],["G4",0.24],["B4",1.50],["A4",0.62],["D5",0.73],["D5",1.60]
+    ]
+  }
+];
+
+const COLORS = ["#e8453c","#f28c28","#f5c518","#6cc644","#1fb5a8","#3d8bfd","#8a5cf6","#e05bb5","#c9c4b5"];
+const FR = {C:"Do",D:"Ré",E:"Mi",F:"Fa",G:"Sol",A:"La",B:"Si"};
+const SEMI = {C:0,D:2,E:4,F:5,G:7,A:9,B:11};
+const freq = n => { const m = n.match(/^([A-G])(#?)(\d)$/); const midi = 12*(+m[3]+1)+SEMI[m[1]]+(m[2]?1:0); return 440*Math.pow(2,(midi-69)/12); };
+const FLAT = {"A#":"Si♭"};
+const label = n => FLAT[n.slice(0,2)] || FR[n[0]] + (n.includes("#") ? "♯" : "");
+
+const $ = id => document.getElementById(id);
+const S = { demoId: 0, playing: false, curGain: null, song: 0, mode: "salle", level: "1", names: "off", err: "restart", speed: 1,
+            seq: [], pads: [], target: 0, input: 0, busy: false, started: 0, timerId: null, mistakes: 0, listens: 0 };
+
+// ===== AUDIO =====
+let ctx;
+function tone(f, dur) {
+  ctx ??= new (window.AudioContext || window.webkitAudioContext)();
+  if (ctx.state === "suspended") ctx.resume();
+  const t = ctx.currentTime, g = ctx.createGain(), o1 = ctx.createOscillator(), o2 = ctx.createOscillator();
+  o1.type = "triangle"; o2.type = "sine"; o1.frequency.value = f; o2.frequency.value = f * 2;
+  const g2 = ctx.createGain(); g2.gain.value = 0.15;
+  o1.connect(g); o2.connect(g2).connect(g); g.connect(ctx.destination);
+  const d = Math.max(0.15, dur);
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.35, t + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.12, t + d * 0.6); g.gain.exponentialRampToValueAtTime(0.0001, t + d + 0.15);
+  o1.start(t); o2.start(t); o1.stop(t + d + 0.2); o2.stop(t + d + 0.2);
+  return g;
+}
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+// ===== STORAGE =====
+const store = { get(k){ try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
+                set(k,v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
+
+// ===== CONSTRUCTION =====
+function buildPads() {
+  const song = SONGS[S.song];
+  // Boutons dans l'ordre où les notes apparaissent dans la mélodie (Ode à la joie : Mi, Fa, Sol, Ré, Do)
+  const used = [...new Set(song.notes.map(n => n[0]))];
+  let slots = used.slice(0, 9);
+  while (slots.length < 9) slots.push(null);
+  if (S.level === "2") { // mélange de Fisher-Yates
+    for (let i = slots.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [slots[i], slots[j]] = [slots[j], slots[i]]; }
+  }
+  S.pads = slots;
+  const grid = $("grid"); grid.innerHTML = "";
+  slots.forEach((note, i) => {
+    const b = document.createElement("button");
+    b.className = "pad" + (note ? "" : " off");
+    b.style.setProperty("--c", note ? COLORS[used.indexOf(note) % COLORS.length] : "#555");
+    b.setAttribute("aria-label", note ? "Note " + label(note) : "Bouton inactif");
+    b.innerHTML = note ? `<span class="nm">${label(note)}</span><span class="num">${i + 1}</span>` : "";
+    b.dataset.i = i;
+    b.addEventListener("pointerdown", e => { e.preventDefault(); press(i); });
+    b.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); press(i); } });
+    grid.appendChild(b);
+  });
+  applyHint();
+}
+function applyHint() { $("grid").className = "grid " + (S.level === "2" ? "lvl2" : S.names === "on" ? "" : S.names === "num" ? "show-num" : "hide-names"); }
+function padFor(note) { return $("grid").children[S.pads.indexOf(note)]; }
+
+function newGame() {
+  S.seq = SONGS[S.song].notes;
+  S.target = S.seq.length;
+  S.demoId++; S.playing = false;
+  S.input = 0; S.mistakes = 0; S.listens = 0; S.busy = false;
+  stopTimer(); $("time").textContent = "0:00";
+  buildPads(); drawProgress();
+  setStatus("Appuie sur Écouter pour lancer la mélodie", "go");
+  $("play").textContent = "Écouter"; $("play").disabled = false;
+  showStats();
+}
+
+function drawProgress() {
+  const p = $("progress"); p.innerHTML = "";
+  S.seq.forEach((_, i) => {
+    const d = document.createElement("i");
+    if (i >= S.target) d.className = "hidden-step";
+    else if (i < S.input) d.className = "done";
+    else if (i === S.input) d.className = "target";
+    p.appendChild(d);
+  });
+}
+function setStatus(t, cls = "") { const s = $("status"); s.textContent = t; s.className = "status " + cls; }
+
+// ===== LECTURE =====
+function stopDemo() {
+  S.demoId++; // annule la boucle en cours
+  try { if (S.curGain) { S.curGain.gain.cancelScheduledValues(ctx.currentTime); S.curGain.gain.setTargetAtTime(0, ctx.currentTime, 0.02); } } catch {}
+  [...$("grid").children].forEach(p => p.classList.remove("lit"));
+  endDemo();
+}
+function endDemo() {
+  S.busy = false; S.playing = false; $("play").textContent = "Réécouter";
+  setStatus(S.input > 0 ? `Continue ! Reprends à la note ${S.input + 1} / ${S.target}` : `À toi ! ${S.target} notes`, "go");
+}
+async function playDemo() {
+  if (S.busy) return;
+  const id = ++S.demoId;
+  S.busy = true; S.playing = true; $("play").textContent = "Arrêter l'écoute"; S.listens++;
+  drawProgress(); // on garde la progression : réécouter ne fait pas recommencer
+  setStatus("Écoute bien…");
+  if (!S.started) startTimer();
+  await wait(400);
+  if (id !== S.demoId) return;
+  const unit = SONGS[S.song].tempo / S.speed * 1000;
+  for (let i = 0; i < S.target; i++) {
+    const [note, len] = S.seq[i];
+    const pad = padFor(note), dur = len * unit;
+    S.curGain = tone(freq(note), dur / 1000 * 0.9);
+    pad.classList.add("lit");
+    await wait(Math.max(120, dur * 0.85));
+    pad.classList.remove("lit");
+    if (id !== S.demoId) return;
+    await wait(Math.max(40, dur * 0.15));
+    if (id !== S.demoId) return;
+  }
+  endDemo();
+}
+
+async function press(i) {
+  const note = S.pads[i];
+  if (S.busy || (!note && S.level !== "2")) return; // niveau 2 : les boutons inutilisés comptent comme une erreur
+  const pad = $("grid").children[i];
+  if (note) tone(freq(note), 0.3);
+  pad.classList.add("lit"); setTimeout(() => pad.classList.remove("lit"), 180);
+  if (!S.started || S.input >= S.target) return; // jeu libre
+
+  if (note === S.seq[S.input][0]) {
+    S.input++; drawProgress();
+    if (S.input === S.target) {
+      if (S.target === S.seq.length) return win();
+      S.busy = true;
+      setStatus("Bien ! Note suivante…", "ok");
+      await wait(700);
+      S.busy = false; S.target++; playDemo();
+    } else setStatus(`${S.input} / ${S.target}`, "go");
+  } else {
+    S.mistakes++;
+    pad.classList.add("wrong"); setTimeout(() => pad.classList.remove("wrong"), 400);
+    if (S.err === "restart") { S.input = 0; setStatus("Raté ! On reprend la séquence du début", "bad"); }
+    else setStatus(`Pas celle-là, réessaie (${S.input} / ${S.target})`, "bad");
+    drawProgress();
+  }
+}
+
+function win() {
+  const secs = stopTimer();
+  setStatus(`Bravo, mélodie réussie en ${fmt(secs)} !`, "ok");
+  $("play").textContent = "Rejouer"; S.started = 0;
+  const key = `best:${S.song}:${S.mode}:${S.level}`, best = store.get(key);
+  if (best == null || secs < best) store.set(key, secs);
+  showStats(secs);
+  // petite fanfare
+  ["C5","E5","G5","C6"].forEach((n, k) => setTimeout(() => tone(freq(n), 0.15), k * 110));
+}
+
+function showStats(last) {
+  const best = store.get(`best:${S.song}:${S.mode}:${S.level}`);
+  const parts = [];
+  if (last != null) parts.push(`Erreurs <b>${S.mistakes}</b> · Écoutes <b>${S.listens}</b>`);
+  parts.push(best != null ? `Record niveau ${S.level} <b>${fmt(best)}</b>` : `Pas encore de record au niveau ${S.level}`);
+  $("stats").innerHTML = parts.join("<br>");
+}
+
+// ===== CHRONO =====
+const fmt = s => `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`;
+function startTimer() {
+  S.started = Date.now();
+  S.timerId = setInterval(() => $("time").textContent = fmt(Math.floor((Date.now()-S.started)/1000)), 250);
+}
+function stopTimer() {
+  clearInterval(S.timerId);
+  const s = S.started ? Math.floor((Date.now()-S.started)/1000) : 0;
+  S.started = 0; return s;
+}
+
+// ===== UI =====
+SONGS.forEach((s, i) => $("song").add(new Option(`${s.name} (${s.notes.length} notes)`, i)));
+$("song").onchange = e => { S.song = +e.target.value; newGame(); };
+function seg(id, key, after) {
+  const el = $(id);
+  el.addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    [...el.children].forEach(c => c.setAttribute("aria-pressed", c === b));
+    S[key] = b.dataset.v; store.set("pref:" + key, S[key]); after && after();
+  });
+  const saved = store.get("pref:" + key);
+  if (saved) [...el.children].forEach(c => { const on = c.dataset.v === saved; c.setAttribute("aria-pressed", on); if (on) S[key] = saved; });
+}
+seg("level", "level", newGame);
+seg("names", "names", applyHint);
+seg("err", "err");
+$("speed").oninput = e => S.speed = +e.target.value;
+$("play").onclick = () => {
+  if (S.playing) return stopDemo(); // 2e appui pendant l'écoute : on coupe et on joue
+  if ($("play").textContent === "Rejouer") newGame();
+  playDemo();
+};
+$("reset").onclick = newGame;
+
+newGame();
+</script>
+
+</body>
+</html>
